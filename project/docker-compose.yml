@@ -1,6 +1,7 @@
-version: '3'
+version: '3.3'
 services:
-  manage:
+  app:
     build: .
+    environment:
     ports:
-      - '8080:8000'
+      - '8080:8080'
