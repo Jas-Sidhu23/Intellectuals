@@ -1,6 +1,25 @@
-version: '3'
+version: '3.3'
+
 services:
+  db:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    ports:
+      - '3306:3306'
+
   manage:
     build: .
+    environment:
+      WAIT_HOSTS: db:3306
+      DB_HOST: db
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      DB_NAME: mydatabase
     ports:
-      - '8080:8000'
+      - '8080:8080'
+    depends_on:
+      - db
