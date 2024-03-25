@@ -10,7 +10,7 @@
 </head>
 <body>
     <h1>Sign Up</h1>
-    <form action="signup.html" method="post">
+    <form action="{% url 'signup' %}" method="post">
         
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required><br><br>
@@ -20,8 +20,8 @@
         <input type="password" id="password2" name="password2" required><br><br>
         <button type="submit">Sign Up</button>
     </form>
-    <p>Already have an account? <a href="signin.html">Sign In</a></p>
-    <p> Go Back ? <a href= "index.html">Home Page </a></p>
+    <p>Already have an account? <a href="{% url 'signin' %}">Sign In</a></p>
+    <p> Go Back ? <a href= "{% url 'index' %}">Home Page </a></p>
 
     <script src="{% static 'functions.js' %}"></script>
 </body>
