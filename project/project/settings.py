@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'backbling',
 ]
 
+SECURE_HSTS_SECONDS = True
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
