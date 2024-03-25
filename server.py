@@ -1,7 +1,7 @@
 from flask import Flask, render_template,request,make_response,send_from_directory,redirect
 
 from pymongo import MongoClient
-from bcrypt import gensalt,hashpw
+from bcrypt import gensalt, hashpw
 import secrets
 from hashlib import sha256
 from bson import ObjectId
