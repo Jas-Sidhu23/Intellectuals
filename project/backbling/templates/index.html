@@ -28,6 +28,13 @@
             <p>An inventory management system for all your needs.</p>
         </div>
     </section>
+
+    <h1>Add Product</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Add Product</button>
+    </form>
     
     <footer>
         <div class="container">
