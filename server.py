@@ -112,6 +112,7 @@ def signup():
 @app.route('/message',methods=['POST'])
 def message():
     message = request.form.get('message')
+    title = request.form.get('title')
     cookie = request.cookies.get('auth_token',None)
     if cookie!=None:
         check = auth_token_collection.find_one({'token':sha256(cookie.encode()).hexdigest()})
@@ -121,7 +122,7 @@ def message():
         response = make_response(redirect('/landingpage'))
         return response
     else:
-        chat_collection.insert_one({'username':check['username'],'message':message,'replys':[]})
+        chat_collection.insert_one({'username':check['username'],'message':message,'replys':[],'title':title})
         response = make_response(redirect('/landingpage'))
         return response
 

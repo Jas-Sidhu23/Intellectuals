@@ -27,7 +27,8 @@
             <form action="/message" method="POST">
                 <label>Make a post here!</label>
                 <br>
-                <input type="text" placeholder="Type your message" name="message">
+                <input type="text" placeholder="Title" name="title" required>
+                <input type="text" placeholder="Type your message" name="message" required>
                 <input type="submit">
             </form>
         </div>
@@ -37,12 +38,13 @@
                 <div>
                     <p>-----------------------------------</p>
                     <p>Post User: {{message['username']}}</p>
+                    <h1>title:{{message['title']}}</h1>
                     <h2>{{message['message']}}</h2>
                     <br>
                     <form action="/reply" method="POST">
                         <label>Make a reply to message:</label>
                         <br>
-                        <input type="text" placeholder="Type your message" name="message">
+                        <input type="text" placeholder="Type your message" name="message" required>
                         <input type="text" placeholder="id" name="msg_id" value='{{message["_id"]}}' hidden>
                         <input type="submit">
                     </form>
