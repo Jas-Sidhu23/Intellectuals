@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   db:
     image: mysql
@@ -23,10 +24,10 @@ services:
       - db
 
   web:
-    image: nginx:alpine
+
     ports:
-      - '80:80'
+      - '8000:8000'
     volumes:
-      - ./html:/usr/share/nginx/html:ro
+      - .:/backbling
     depends_on:
       - manage

@@ -2,7 +2,6 @@
 
 <!DOCTYPE html>
 <html lang="en">
-<link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,10 +12,11 @@
     <header>
         <nav>
             <div class="container">
+                <img src="{% static 'backpack.png' %}" alt="It's a backpack" class="bp_image"/>
                 <h1>Back Bling</h1>
                 <ul>
-                    <li><a href="#">Login</a></li>
-                    <li><a href="#">Signup</a></li>
+                    <li><a href="{% url 'signin' %}">Login</a></li>
+                    <li><a href="{% url 'signup' %}">Signup</a></li>
                 </ul>
             </div>
         </nav>
@@ -34,5 +34,7 @@
             <p>&copy; 2024 Back Bling. All rights reserved.</p>
         </div>
     </footer>
+
+    <script src="{% static 'functions.js' %}"></script>
 </body>
 </html>
