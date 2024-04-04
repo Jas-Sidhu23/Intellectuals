@@ -20,7 +20,7 @@
     
     <section class="hero">
         <div class="container">
-            <h2>Welcome to Back Bling message board</h2>
+            <h2>Welcome to the Back Bling message board!</h2>
             <p>{{prompt}}</p>
         </div>
         <br>
@@ -32,15 +32,19 @@
                 <input type="text" placeholder="Type your message" name="message" required>
                 <input type="submit">
             </form>
+            <form action="/upload-image" method="post" enctype="multipart/form-data">
+                <input type="file" name="upload" accept="image/jpeg, image/png, image/gif">
+                <input type="submit" value="Upload">
+            </form>
         </div>
         <div>
             <h1>Messages:</h1>
             {% for message in msgs%}
                 <div>
                     <p>-----------------------------------</p>
-                    <p>Post User: {{message['username']}}</p>
-                    <h1>title:{{message['title']}}</h1>
-                    <h2>{{message['message']}}</h2>
+                    <h1>Poster: {{message['username']}}</h1>
+                    <p>Title: {{message['title']}}</p>
+                    <p>{{message['message']}}</p>
                     <br>
                     <form action="/reply" method="POST">
                         <label>Make a reply to message:</label>
@@ -50,17 +54,17 @@
                         <input type="submit">
                     </form>
                     <br>
-                    <h1>Replys</h1>
+                    <h3>Replies</h3>
                     {% for reply in message['replys']%}
                         <div>
-                            <p>Reply User: {{reply['username']}}</p>
-                            <h2>{{reply['message']}}</h2>
+                            <p>Replier: {{reply['username']}}</p>
+                            <p>{{reply['message']}}</p>
                         </div>
                         <br>
                     {%endfor%}
                     <br>
                 </div>
-                {%endfor%}
+            {%endfor%}
         </div>
     </section>
     
