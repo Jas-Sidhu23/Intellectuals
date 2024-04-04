@@ -12,59 +12,56 @@
             <div class="container">
                 <img src="/backpack.png" alt="It's a backpack" class="bp_image"/>
                 <h1>Back Bling</h1>
-                    <a href="/"><button>Home</button></a>
-                    <a href='/logout'><button>Logout</button></a>
+                    <li><a href="/">Home</a></li>
             </div>
         </nav>
     </header>
     
     <section class="hero">
         <div class="container">
-            <h2>Welcome to the Back Bling message board!</h2>
+            <h2>Welcome to Back Bling message board</h2>
             <p>{{prompt}}</p>
         </div>
         <br>
         <div>
-            <form action="/message" method="POST">
+            <form action="/message" method="POST" enctype="multipart/form-data">
                 <label>Make a post here!</label>
                 <br>
-                <input type="text" placeholder="Title" name="title" required>
-                <input type="text" placeholder="Type your message" name="message" required>
-                <input type="submit">
-            </form>
-            <form action="/upload-image" method="post" enctype="multipart/form-data">
-                <input type="file" name="upload" accept="image/jpeg, image/png, image/gif">
-                <input type="submit" value="Upload">
+                <input type="text" placeholder="Type your message" name="message">
+                <input type="file" name="image" accept="image/jpeg, image/png, image/gif"> 
+                <input type="submit" value="Post Message">
             </form>
         </div>
         <div>
             <h1>Messages:</h1>
-            {% for message in msgs%}
+            {% for message in msgs %}
                 <div>
                     <p>-----------------------------------</p>
-                    <h1>Poster: {{message['username']}}</h1>
-                    <p>Title: {{message['title']}}</p>
-                    <p>{{message['message']}}</p>
+                    <p>Post User: {{message['username']}}</p>
+                    <h2>{{message['message']}}</h2>
+                    {% if message.image_path %} 
+                        <img src="{{ url_for('static', filename=message.image_path) }}" alt="Uploaded image">
+                    {% endif %}
                     <br>
                     <form action="/reply" method="POST">
                         <label>Make a reply to message:</label>
                         <br>
-                        <input type="text" placeholder="Type your message" name="message" required>
-                        <input type="text" placeholder="id" name="msg_id" value='{{message["_id"]}}' hidden>
+                        <input type="text" placeholder="Type your message" name="message">
+                        <input type="text" placeholder="id" name="msg_id" value="{{message['_id']}}" hidden>
                         <input type="submit">
                     </form>
                     <br>
-                    <h3>Replies</h3>
-                    {% for reply in message['replys']%}
+                    <h1>Replys</h1>
+                    {% for reply in message['replys'] %}
                         <div>
-                            <p>Replier: {{reply['username']}}</p>
-                            <p>{{reply['message']}}</p>
+                            <p>Reply User: {{reply['username']}}</p>
+                            <h2>{{reply['message']}}</h2>
                         </div>
                         <br>
-                    {%endfor%}
+                    {% endfor %}
                     <br>
                 </div>
-            {%endfor%}
+            {% endfor %}
         </div>
     </section>
     
