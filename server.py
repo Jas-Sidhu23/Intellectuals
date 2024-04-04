@@ -12,6 +12,8 @@ Project = Database['Project']
 users_collection = Project['users']
 auth_token_collection = Project['auth_token']
 chat_collection = Project['chat']
+image_collection = Project['image']
+
 
 app = Flask(__name__)
 
@@ -117,6 +119,10 @@ def signup():
                 password_hashed = hashpw(password.encode(),salt)
                 users_collection.insert_one({'username':username,'password':password_hashed,'salt':salt})
                 return redirect('/signin')
+@app.route('/image',methods= ['POST'])
+def image_upload():
+    print("dfdsfds")
+
 
 @app.route('/message',methods=['POST'])
 def message():
