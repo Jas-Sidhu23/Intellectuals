@@ -23,6 +23,15 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/logout')
+def logout():
+    cookie = request.cookies.get('auth_token')
+    if cookie != None:
+        auth_token_collection.find_one_and_delete({'token':sha256(cookie.encode()).hexdigest()})
+    response = make_response(redirect('/landingpage'))
+    response.set_cookie('auth_token',"",max_age=0)
+    return response
+
 @app.route('/')
 def index():
     response = make_response(render_template('index.html'),200)
