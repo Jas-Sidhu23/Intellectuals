@@ -1,7 +1,8 @@
-from flask import Flask, render_template,request,make_response,send_from_directory,redirect
-
+from flask import Flask, render_template,request,make_response,send_from_directory,redirect, url_for
+from werkzeug.utils import secure_filename
+import os
 from pymongo import MongoClient
-from bcrypt import gensalt, hashpw
+from bcrypt import gensalt,hashpw
 import secrets
 from hashlib import sha256
 from bson import ObjectId
@@ -14,15 +15,13 @@ auth_token_collection = Project['auth_token']
 chat_collection = Project['chat']
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'static/images'  # Ensure this directory exists
 
-@app.route('/logout')
-def logout():
-    cookie = request.cookies.get('auth_token')
-    if cookie != None:
-        auth_token_collection.find_one_and_delete({'token':sha256(cookie.encode()).hexdigest()})
-    response = make_response(redirect('/landingpage'))
-    response.set_cookie('auth_token',"",max_age=0)
-    return response
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
@@ -118,20 +117,31 @@ def signup():
                 users_collection.insert_one({'username':username,'password':password_hashed,'salt':salt})
                 return redirect('/signin')
 
-@app.route('/message',methods=['POST'])
+@app.route('/message', methods=['POST'])
 def message():
     message = request.form.get('message')
-    title = request.form.get('title')
-    cookie = request.cookies.get('auth_token',None)
-    if cookie!=None:
-        check = auth_token_collection.find_one({'token':sha256(cookie.encode()).hexdigest()})
+    image = request.files['image']  # Access the uploaded image
+    cookie = request.cookies.get('auth_token', None)
+    
+    if cookie is not None:
+        check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
     else:
         check = None
-    if cookie == None or check == None or message == None:
+    
+    if cookie is None or check is None or message is None or image.filename == '':
         response = make_response(redirect('/landingpage'))
         return response
     else:
-        chat_collection.insert_one({'username':check['username'],'message':message,'replys':[],'title':title})
+        if image and allowed_file(image.filename):
+            filename = secure_filename(image.filename)
+            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            # Now you can also save the filename in your chat_collection
+            chat_collection.insert_one({
+                'username': check['username'],
+                'message': message,
+                'replys': [],
+                'image_path': os.path.join('images', filename) 
+            })
         response = make_response(redirect('/landingpage'))
         return response
 
