@@ -135,30 +135,42 @@ def image_upload():
 @app.route('/message', methods=['POST'])
 def message():
     message = request.form.get('message')
-    image = request.files['image']  # Access the uploaded image
+    image = request.files.get('image')  # Safely get the uploaded image, None if not present
     cookie = request.cookies.get('auth_token', None)
     
     if cookie is not None:
         check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
     else:
         check = None
-    
-    if cookie is None or check is None or message is None or image.filename == '':
+
+    if cookie is None or check is None or message is None:
+        # Redirect if authentication fails or message is missing
         response = make_response(redirect('/landingpage'))
         return response
     else:
-        if image and allowed_file(image.filename):
-            filename = secure_filename(image.filename)
-            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            # Now you can also save the filename in your chat_collection
+        if image is None or image.filename == '':
+            # Save the message if no image is uploaded
             chat_collection.insert_one({
                 'username': check['username'],
                 'message': message,
-                'replys': [],
-                'image_path': os.path.join('images', filename) 
+                'replies': [],
+                'image_path': None  # Indicates no image was posted
             })
+        else:
+            if allowed_file(image.filename):
+                # If image is allowed, save it and post the message with image path
+                filename = secure_filename(image.filename)
+                image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                chat_collection.insert_one({
+                    'username': check['username'],
+                    'message': message,
+                    'replies': [],
+                    'image_path': os.path.join('images', filename) 
+                })
+
         response = make_response(redirect('/landingpage'))
         return response
+
 
 @app.route('/reply',methods=['POST'])
 def reply():
