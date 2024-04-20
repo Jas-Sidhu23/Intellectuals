@@ -49,7 +49,7 @@ def landingpage():
     else:
         check = None
     if(cookie == None or check == None):
-        response = make_response(render_template('landingpage.html',prompt='You are not signed in! To make or interact with posts please sign in',msgs=messages),200)
+        response = make_response(render_template('landingpage.html',prompt='You are not signed in! To make or interact with posts please sign in or make an account.',msgs=messages),200)
         response.headers["X-Content-Type-Options"] ='nosniff'
         return response
     else:
