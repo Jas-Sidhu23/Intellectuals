@@ -1,6 +1,8 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Back Bling - Inventory Management System</title>
@@ -27,12 +29,12 @@
         </div>
         <br>
         <div>
-            <form action="/message" method="POST" enctype="multipart/form-data">
+            <form enctype="multipart/form-data">
                 <label>Make a post here!</label>
                 <br>
                 <input type="text" placeholder="Type your message" name="message">
-                <input type="file" name="image" accept="image/jpeg, image/png, image/gif"> 
-                <input type="submit" value="Post Message">
+                <input type="file" name="image" accept="image/jpeg, image/png, image/gif">
+                <input type="button" value="Post Message" id="sendMessageButton">
             </form>
         </div>
         <div>
@@ -46,13 +48,14 @@
                         <img src="{{ url_for('static', filename=message.image_path) }}" alt="Uploaded image">
                     {% endif %}
                     <br>
-                    <form action="/reply" method="POST">
+                    <form>
                         <label>Make a reply to message:</label>
                         <br>
                         <input type="text" placeholder="Type your message" name="message">
-                        <input type="text" placeholder="id" name="msg_id" value="{{message['_id']}}" hidden>
-                        <input type="submit">
+                        <input type="text" name="msg_id" value="{{message['_id']}}" hidden>
+                        <button type="button" id="sendReplyButton">Reply</button>
                     </form>
+                    
                     <br>
                     <h1>Replys</h1>
                     {% for reply in message['replys'] %}
