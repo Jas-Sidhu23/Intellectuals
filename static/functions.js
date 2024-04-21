@@ -61,6 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var messagesContainer = document.getElementById('messagesContainer');
         var newMessageElement = document.createElement('div');
         newMessageElement.classList.add('message');
+        
         newMessageElement.innerHTML = `
             <p>-----------------------------------</p>
             <p>Post User: ${data.username}</p>
@@ -74,6 +75,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 <button type="button" class="sendReplyButton">Reply</button>
             </form>
         `;
+
+        if (data.image_path) {
+            // Construct the URL for the image
+            var imageUrl = '/static/' + data.image_path;
+            // Add the image to the message HTML
+            messageHtml += `<img src="${imageUrl}" alt="Uploaded image">`;
+        }
+
         messagesContainer.appendChild(newMessageElement);
     });
 
