@@ -48,30 +48,78 @@ document.addEventListener("DOMContentLoaded", function() {
             <p>Post User: ${data.username}</p>
             <h2>${data.message}</h2>
         `;
+        // Add reply form
+        var replyForm = document.createElement('form');
+        var replyLabel = document.createElement('label');
+        replyLabel.textContent = 'Make a reply to message:';
+        var replyInput = document.createElement('input');
+        replyInput.setAttribute('type', 'text');
+        replyInput.setAttribute('placeholder', 'Type your message');
+        replyInput.setAttribute('name', 'message');
+        var msgIdInput = document.createElement('input');
+        msgIdInput.setAttribute('type', 'text');
+        msgIdInput.setAttribute('name', 'msg_id');
+        msgIdInput.setAttribute('value', data._id);
+        msgIdInput.setAttribute('hidden', 'true');
+        var replyButton = document.createElement('button');
+        replyButton.setAttribute('type', 'button');
+        replyButton.classList.add('sendReplyButton');
+        replyButton.textContent = 'Reply';
+
+        replyForm.appendChild(replyLabel);
+        replyForm.appendChild(document.createElement('br'));
+        replyForm.appendChild(replyInput);
+        replyForm.appendChild(msgIdInput);
+        replyForm.appendChild(replyButton);
+
+        newMessageElement.appendChild(replyForm);
         messagesContainer.appendChild(newMessageElement);
     });
 
     // Handle button clicks to send replies
-    document.querySelectorAll('.sendReplyButton').forEach(function(button) {
+    document.querySelectorAll('.sendReplyButton').forEach(button => {
         button.addEventListener('click', function(event) {
             var form = event.target.closest('form');
             var messageInput = form.querySelector('[name="message"]');
             var messageIdInput = form.querySelector('[name="msg_id"]');
-            if (messageInput.value.trim()) {
+            if (messageInput.value.trim() && messageIdInput.value) { // Check if messageIdInput has value
                 socket.emit('send_reply', {
+                    username: 'YourUsername',  // This should be dynamically assigned
                     message: messageInput.value,
-                    msg_id: messageIdInput.value
+                    chat_id: messageIdInput.value // Include the chat_id field
                 });
                 messageInput.value = '';  // Clear the input after sending
             }
         });
     });
 
-    // Listen for replies posted to the server
-    socket.on('reply_posted', function(data) {
-        console.log('Reply posted:', data);
-        // Add code here to append the reply to the appropriate message on the webpage
+// Listen for replies posted to the server
+socket.on('reply_posted', function(data) {
+    console.log('Reply posted:', data);
+    // Find the message container with the corresponding message ID
+    var messageContainers = document.querySelectorAll(`[data-msg-id="${data.chat_id}"]`);
+    messageContainers.forEach(function(messageContainer) {
+        // If the message container exists, find the replies container within it
+        var repliesContainer = messageContainer.querySelector('.repliesContainer');
+        if (repliesContainer) {
+            // Create a new reply element
+            var newReplyElement = document.createElement('div');
+            newReplyElement.classList.add('reply');
+            newReplyElement.innerHTML = `
+                <p>Reply User: ${data.username}</p>
+                <h2>${data.message}</h2>
+            `;
+            // Append the new reply element to the replies container
+            repliesContainer.appendChild(newReplyElement);
+        } else {
+            console.error('Replies container not found in the message container.');
+        }
     });
+});
+
+
+
+
 
     // Handle WebSocket errors
     socket.on('error', function(error) {

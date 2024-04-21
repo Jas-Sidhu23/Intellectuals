@@ -137,17 +137,20 @@ def handle_post_message(data):
         })
         emit('new_message', {'username': username, 'message': message, 'image_path': None}, broadcast=True)
 
+# Inside handle_send_reply function
 @socketio.on('send_reply')
 def handle_send_reply(data):
-    msg_id = data['msg_id']  # Change from 'chat_id' to 'msg_id'
+    chat_id = data['chat_id']
     message = data['message']
-    username = data['username']
-    chat = chat_collection.find_one({'_id': ObjectId(msg_id)})
+    username = data['username']  # Assuming you also send the username from the client
+    chat = chat_collection.find_one({'_id': ObjectId(chat_id)})
     if chat:
         replies = chat.get('replies', [])
         replies.append({'username': username, 'message': message})
-        chat_collection.update_one({'_id': ObjectId(msg_id)}, {"$set": {'replies': replies}})
-        emit('reply_posted', {'msg_id': msg_id, 'replies': replies}, broadcast=True)
+        chat_collection.update_one({'_id': ObjectId(chat_id)}, {"$set": {'replies': replies}})
+        # Emit reply_posted event with chat_id and reply data
+        emit('reply_posted', {'chat_id': chat_id, 'username': username, 'message': message}, broadcast=True)
+
 
 
 if __name__ == '__main__':
