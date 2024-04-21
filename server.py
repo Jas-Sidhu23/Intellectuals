@@ -6,8 +6,10 @@ from pymongo import MongoClient
 from bcrypt import gensalt, hashpw
 import secrets
 from hashlib import sha256
+from flask import jsonify
 from bson import ObjectId
 import logging
+import base64
 
 # Database configuration
 Database = MongoClient('mongo')
@@ -85,6 +87,15 @@ def signup():
             return redirect('/signin')
     return make_response(render_template('signup.html'))
 
+@app.route('/get_username', methods=['POST'])
+def get_username():
+    token = request.json.get('token')
+    user = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
+    if user:
+        return jsonify({'username': user['username']})
+    else:
+        return jsonify({'error': 'Username not found'}), 404
+
 @socketio.on('connect')
 def handle_connect():
     token = request.args.get('token')
@@ -107,19 +118,28 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
-
 @socketio.on('post_message')
 def handle_post_message(data):
-    username = data['username']
+    token = request.args.get('token')
+    user_info = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
+    if not user_info:
+        emit('error', {'error': 'Authentication failed'})
+        return
+
+    username = user_info['username']
     message = data['message']
     image_data = data.get('image')
-    
+
     if image_data:
-        # Handle the case where image data is provided
-        filename = secure_filename(image_data['filename'])
+        # Assume the image is sent as a base64 encoded string because files cannot be directly sent via sockets without encoding
+        filename = secure_filename(f"{username}_{int(time.time())}.png")  # Naming the file with a timestamp to avoid conflicts
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        with open(image_path, 'wb') as f:
-            f.write(image_data['content'])
+
+        # Decode the base64 string and write to a file
+        image_data_bytes = base64.b64decode(image_data.split(',')[1])
+        with open(image_path, 'wb') as image_file:
+            image_file.write(image_data_bytes)
+
         chat_collection.insert_one({
             'username': username,
             'message': message,
@@ -128,7 +148,7 @@ def handle_post_message(data):
         })
         emit('new_message', {'username': username, 'message': message, 'image_path': image_path}, broadcast=True)
     else:
-        # Handle the case where no image is provided
+        # No image is provided
         chat_collection.insert_one({
             'username': username,
             'message': message,
@@ -137,21 +157,39 @@ def handle_post_message(data):
         })
         emit('new_message', {'username': username, 'message': message, 'image_path': None}, broadcast=True)
 
-# Inside handle_send_reply function
+        
 @socketio.on('send_reply')
 def handle_send_reply(data):
-    chat_id = data['chat_id']
-    message = data['message']
-    username = data['username']  # Assuming you also send the username from the client
+    chat_id = data.get('chat_id')
+    message = data.get('message')
+    token = request.args.get('token')  # This might not work as expected if token isn't in request.args
+
+    # It's better to handle token during the connection and store it in session or similar
+    if not token:
+        emit('error', {'error': 'No token provided'})
+        return
+
+    user_info = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
+    if not user_info:
+        emit('error', {'error': 'Authentication failed'})
+        return
+
+    username = user_info['username']
     chat = chat_collection.find_one({'_id': ObjectId(chat_id)})
-    if chat:
-        replies = chat.get('replies', [])
-        replies.append({'username': username, 'message': message})
-        chat_collection.update_one({'_id': ObjectId(chat_id)}, {"$set": {'replies': replies}})
-        # Emit reply_posted event with chat_id and reply data
-        emit('reply_posted', {'chat_id': chat_id, 'username': username, 'message': message}, broadcast=True)
 
+    if not chat:
+        emit('error', {'error': 'Chat not found'})
+        return
 
+    replies = chat.get('replies', [])
+    replies.append({'username': username, 'message': message})
+    update_result = chat_collection.update_one({'_id': ObjectId(chat_id)}, {"$set": {'replies': replies}})
+
+    if update_result.modified_count == 0:
+        emit('error', {'error': 'Failed to update chat'})
+        return
+
+    emit('reply_posted', {'chat_id': chat_id, 'username': username, 'message': message, 'replies': replies}, broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app, host="0.0.0.0", port=8080, allow_unsafe_werkzeug=True)

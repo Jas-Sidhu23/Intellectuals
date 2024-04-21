@@ -2,4 +2,3 @@ flask
 bcrypt
 pymongo
 flask-socketio
-# eventlet
