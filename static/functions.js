@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function() {
             var reader = new FileReader();
             reader.onloadend = function() {
                 socket.emit('post_message', {
-                    username: 'YourUsername', // This should be dynamically assigned
+                    username: currentUser, // This should be dynamically assigned
                     message: messageInput.value,
                     image: {
                         filename: file.name,
