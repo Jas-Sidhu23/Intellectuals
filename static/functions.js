@@ -28,12 +28,31 @@ document.addEventListener("DOMContentLoaded", function() {
 
     document.getElementById('sendMessageButton').addEventListener('click', function() {
         var messageInput = document.querySelector('[name="message"]');
-        if (messageInput.value.trim()) {
-            socket.emit('post_message', {
-                username: currentUser,
-                message: messageInput.value
-            });
-            messageInput.value = '';
+        var imageInput = document.querySelector('[name="image"]'); // Assuming you have an input field for the image
+        var file = imageInput.files[0]; // Get the first file from the input
+    
+        if (messageInput.value.trim() || file) { // Check if there's a message or an image
+            var reader = new FileReader();
+            reader.onloadend = function() {
+                socket.emit('post_message', {
+                    username: currentUser, // This should be dynamically assigned
+                    message: messageInput.value,
+                    image: {
+                        filename: file.name,
+                        content: reader.result
+                    }
+                });
+                messageInput.value = ''; // Clear the input after sending
+            }
+            if (file) {
+                reader.readAsArrayBuffer(file); // Read the file as an ArrayBuffer
+            } else {
+                socket.emit('post_message', {
+                    username: 'YourUsername', // This should be dynamically assigned
+                    message: messageInput.value
+                });
+                messageInput.value = ''; // Clear the input after sending
+            }
         }
     });
 
@@ -42,6 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var messagesContainer = document.getElementById('messagesContainer');
         var newMessageElement = document.createElement('div');
         newMessageElement.classList.add('message');
+        
         newMessageElement.innerHTML = `
             <p>-----------------------------------</p>
             <p>Post User: ${data.username}</p>
@@ -55,6 +75,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 <button type="button" class="sendReplyButton">Reply</button>
             </form>
         `;
+
+        if (data.image_path) {
+            // Construct the URL for the image
+            var imageUrl = '/static/' + data.image_path;
+            // Add the image to the message HTML
+            messageHtml += `<img src="${imageUrl}" alt="Uploaded image">`;
+        }
+
         messagesContainer.appendChild(newMessageElement);
     });
 
@@ -91,9 +119,6 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error('Replies container not found for message ID:', data.chat_id);
         }
     });
-    
-
-    
 
     document.querySelectorAll('.sendReplyButton').forEach(button => {
         button.addEventListener('click', function(event) {
@@ -111,7 +136,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     });
-
 
     socket.on('error', function(error) {
         console.error('WebSocket Error:', error);
