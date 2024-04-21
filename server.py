@@ -29,7 +29,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/logout')
-def logout():
+def logout():   
     cookie = request.cookies.get('auth_token')
     if cookie:
         auth_token_collection.find_one_and_delete({'token': sha256(cookie.encode()).hexdigest()})
@@ -118,37 +118,28 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
+
 @socketio.on('post_message')
 def handle_post_message(data):
-    token = request.args.get('token')
-    user_info = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
-    if not user_info:
-        emit('error', {'error': 'Authentication failed'})
-        return
-
-    username = user_info['username']
+    username = data['username']
     message = data['message']
     image_data = data.get('image')
-
+    
     if image_data:
-        # Assume the image is sent as a base64 encoded string because files cannot be directly sent via sockets without encoding
-        filename = secure_filename(f"{username}_{int(time.time())}.png")  # Naming the file with a timestamp to avoid conflicts
+        # Handle the case where image data is provided
+        filename = secure_filename(image_data['filename'])
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-        # Decode the base64 string and write to a file
-        image_data_bytes = base64.b64decode(image_data.split(',')[1])
-        with open(image_path, 'wb') as image_file:
-            image_file.write(image_data_bytes)
-
+        with open(image_path, 'wb') as f:
+            f.write(image_data['content'])
         chat_collection.insert_one({
             'username': username,
             'message': message,
             'replies': [],
-            'image_path': image_path
+            'image_path': f'images/{filename}'
         })
         emit('new_message', {'username': username, 'message': message, 'image_path': image_path}, broadcast=True)
     else:
-        # No image is provided
+        # Handle the case where no image is provided
         chat_collection.insert_one({
             'username': username,
             'message': message,
