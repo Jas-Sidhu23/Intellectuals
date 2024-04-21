@@ -1,4 +1,4 @@
-from flask import Flask, render_template,request,make_response,send_from_directory,redirect, url_for
+from flask import Flask, render_template, request, make_response, send_from_directory, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
 from pymongo import MongoClient
@@ -6,6 +6,7 @@ from bcrypt import gensalt,hashpw
 import secrets
 from hashlib import sha256
 from bson import ObjectId
+from flask_socketio import SocketIO, emit
 
 #Database = MongoClient('localhost')
 Database = MongoClient('mongo')
@@ -16,6 +17,8 @@ chat_collection = Project['chat']
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/images'  # Ensure this directory exists
+
+socketio = SocketIO(app)
 
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
@@ -177,5 +180,50 @@ def reply():
         else:
             response = make_response(redirect('/landingpage'))
             return response
+        
+@socketio.on('post_message')
+def handle_post_message():
+    message = request.form.get('message')
+    image = request.files['image']
+    cookie = request.cookies.get('auth_token', None)
+    if cookie:
+        check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
+        if check and message and image:
+            filename = secure_filename(image.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image.save(image_path)
+            chat_collection.insert_one({
+                'username': check['username'],
+                'message': message,
+                'replys': [],
+                'image_path': os.path.join('images', filename) 
+            })
+            emit('message_success', {'message': 'Message added successfully.'})
+        else:
+            emit('message_error', {'error': 'Authentication failed, message is empty, or image is not provided.'})
+    else:
+        emit('message_error', {'error': 'User not authenticated.'})
 
-app.run(host="0.0.0.0",port=8080)
+@socketio.on('post_reply')
+def handle_post_reply():
+    message = request.form.get('message')
+    id = request.form.get('msg_id')
+    cookie = request.cookies.get('auth_token', None)
+    if cookie:
+        check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
+        if check and message:
+            chat = chat_collection.find_one({'_id': ObjectId(id)})
+            if chat:
+                replies = chat.get('replys', [])
+                replies.append({'username': check['username'], 'message': message})
+                chat_collection.update_one({'_id': ObjectId(id)}, {"$set": {'replys': replies}})
+                emit('reply_success', {'message': 'Reply added successfully.'})
+            else:
+                emit('reply_error', {'error': 'Chat not found.'})
+        else:
+            emit('reply_error', {'error': 'Authentication failed or message is empty.'})
+    else:
+        emit('reply_error', {'error': 'User not authenticated.'})
+
+
+socketio.run(app, host="0.0.0.0", port=8080, allow_unsafe_werkzeug=True)

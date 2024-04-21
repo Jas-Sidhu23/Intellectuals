@@ -1,3 +1,5 @@
+const socket = io.connect('http://' + document.domain + ':' + location.port);
+
 document.addEventListener("DOMContentLoaded", function() {
     // Display current date and time on the page
     const dateElement = document.createElement("div");
