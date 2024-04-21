@@ -126,7 +126,7 @@ def handle_post_message(data):
             'replies': [],
             'image_path': image_path
         })
-        emit('new_message', {'username': username, 'message': message, 'image_path': image_path}, room=username)
+        emit('new_message', {'username': username, 'message': message, 'image_path': image_path}, broadcast=True)
     else:
         # Handle the case where no image is provided
         chat_collection.insert_one({
@@ -135,7 +135,7 @@ def handle_post_message(data):
             'replies': [],
             'image_path': None
         })
-        emit('new_message', {'username': username, 'message': message, 'image_path': None}, room=username)
+        emit('new_message', {'username': username, 'message': message, 'image_path': None}, broadcast=True)
 
 @socketio.on('send_reply')
 def handle_send_reply(data):
@@ -147,7 +147,7 @@ def handle_send_reply(data):
         replies = chat.get('replies', [])
         replies.append({'username': username, 'message': message})
         chat_collection.update_one({'_id': ObjectId(chat_id)}, {"$set": {'replies': replies}})
-        emit('reply_posted', {'chat_id': chat_id, 'replies': replies}, room=username)
+        emit('reply_posted', {'chat_id': chat_id, 'replies': replies}, broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app, host="0.0.0.0", port=8080, allow_unsafe_werkzeug=True)

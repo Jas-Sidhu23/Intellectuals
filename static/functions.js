@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Listen for new messages from the server
     socket.on('new_message', function(data) {
         console.log('New message received:', data);
-        var messagesContainer = document.getElementById('messagesContainer'); // Assuming you have this element in your HTML
+        var messagesContainer = document.querySelector('.mess-container'); // Target the container element
         var newMessageElement = document.createElement('div');
         newMessageElement.textContent = data.username + ": " + data.message; // Display the username and message
         messagesContainer.appendChild(newMessageElement);
@@ -48,18 +48,16 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Handle button clicks to send replies
     document.getElementById('sendReplyButton').addEventListener('click', function(event) {
-        button.addEventListener('click', function(event) {
-            var form = event.target.closest('form');
-            var messageInput = form.querySelector('[name="message"]');
-            var messageIdInput = form.querySelector('[name="msg_id"]');
-            if (messageInput.value.trim()) {
-                socket.emit('send_reply', {
-                    message: messageInput.value,
-                    msg_id: messageIdInput.value
-                });
-                messageInput.value = '';  // Clear the input after sending
-            }
-        });
+        var form = event.target.closest('form');
+        var messageInput = form.querySelector('[name="message"]');
+        var messageIdInput = form.querySelector('[name="msg_id"]');
+        if (messageInput.value.trim()) {
+            socket.emit('send_reply', {
+                message: messageInput.value,
+                msg_id: messageIdInput.value
+            });
+            messageInput.value = '';  // Clear the input after sending
+        }
     });
 
     // Listen for replies posted to the server
