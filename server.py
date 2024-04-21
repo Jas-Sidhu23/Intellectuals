@@ -121,12 +121,21 @@ def handle_disconnect():
 
 @socketio.on('post_message')
 def handle_post_message(data):
-    username = data['username']
+    token = request.args.get('token')  # Ensure token is passed correctly; consider using session or a different method if not available
+    if not token:
+        emit('error', {'error': 'No token provided'})
+        return
+
+    user_info = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
+    if not user_info:
+        emit('error', {'error': 'Authentication failed'})
+        return
+
+    username = user_info['username']
     message = data['message']
     image_data = data.get('image')
     
     if image_data:
-        # Handle the case where image data is provided
         filename = secure_filename(image_data['filename'])
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         with open(image_path, 'wb') as f:
@@ -139,7 +148,6 @@ def handle_post_message(data):
         })
         emit('new_message', {'username': username, 'message': message, 'image_path': image_path}, broadcast=True)
     else:
-        # Handle the case where no image is provided
         chat_collection.insert_one({
             'username': username,
             'message': message,
