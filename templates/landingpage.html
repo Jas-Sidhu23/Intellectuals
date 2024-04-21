@@ -1,6 +1,8 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Back Bling - Inventory Management System</title>
@@ -10,7 +12,7 @@
     <header>
         <nav>
             <div class="container">
-                <img src="/images/backpack.png" alt="It's a backpack" class="bp_image"/>
+                <img src="/backpack.png" alt="It's a backpack" class="bp_image"/>
                 <h1>Back Bling</h1>
                 <ul>
                     <li><a href="/">Home</a></li>
@@ -21,51 +23,55 @@
     </header>
     
     <section class="hero">
-        <div class="container">
-            <h2>Welcome to Back Bling Message Board</h2>
-            <p>{{prompt}}</p>
+        <div class="mess-container">
+            <h2>Welcome to Back Bling message board</h2>
+            <p>{{ prompt }}</p>
         </div>
         <br>
         <div>
-            <form action="/message" method="POST" enctype="multipart/form-data">
+            <form enctype="multipart/form-data" id="postMessageForm">
                 <label>Make a post here!</label>
                 <br>
                 <input type="text" placeholder="Type your message" name="message">
-                <input type="file" name="image" accept="image/jpeg, image/png, image/gif"> 
-                <input type="submit" value="Post Message">
+                <input type="file" name="image" accept="image/jpeg, image/png, image/gif">
+                <input type="button" value="Post Message" id="sendMessageButton">
             </form>
         </div>
-        <div>
+        <div id="messagesContainer">
             <h1>Messages:</h1>
             {% for message in msgs %}
-                <div>
-                    <p>-----------------------------------</p>
-                    <p>Poster: {{message['username']}}</p>
-                    <p>{{message['message']}}</p>
-                    {% if message.image_path %}
-                        <img src="{{ url_for('static', filename=message.image_path) }}" alt="Uploaded image">
-                    {% endif %}
+            <div class="message" data-msg-id="{{ message['_id'] }}">
+                <p>-----------------------------------</p>
+                <p>Post User: {{ message['username'] }}</p>
+                <h2>{{ message['message'] }}</h2>
+                {% if message.image_path %} 
+                    <img src="{{ url_for('static', filename=message.image_path) }}" alt="Uploaded image">
+                {% endif %}
+                <br>
+                <form>
+                    <label>Make a reply to message:</label>
                     <br>
-                    <form action="/reply" method="POST">
-                        <label>Make a reply to this message:</label>
-                        <br>
-                        <input type="text" placeholder="Type your message" name="message">
-                        <input type="text" placeholder="id" name="msg_id" value="{{message['_id']}}" hidden>
-                        <input type="submit">
-                    </form>
+                    <input type="text" placeholder="Type your message" name="message">
+                    <input type="text" name="msg_id" value="{{ message['_id'] }}" hidden>
+                    <button type="button" class="sendReplyButton">Reply</button>
+                </form>
+                
+                <br>
+                <h1>Replies</h1>
+                <div class="repliesContainer">
+                    {% for reply in message['replies'] %}
+                    <div class="reply">
+                        <p>Reply User: {{ reply['username'] }}</p>
+                        <h2>{{ reply['message'] }}</h2>
+                    </div>
                     <br>
-                    <h1>Replies</h1>
-                    {% for reply in message['replys'] %}
-                        <div>
-                            <p>Replier: {{reply['username']}}</p>
-                            <p>{{reply['message']}}</p>
-                        </div>
-                        <br>
                     {% endfor %}
-                    <br>
                 </div>
+                <br>
+            </div>
             {% endfor %}
         </div>
+          
     </section>
     
     <footer>
