@@ -162,10 +162,12 @@ def reply():
     message = request.form.get('message')
     id = request.form.get('msg_id')
     cookie = request.cookies.get('auth_token',None)
+
     if cookie!=None:
         check = auth_token_collection.find_one({'token':sha256(cookie.encode()).hexdigest()})
     else:
         check = None
+
     if cookie == None or check == None or message == None:
         response = make_response(redirect('/landingpage'))
         return response
@@ -182,10 +184,11 @@ def reply():
             return response
         
 @socketio.on('post_message')
-def handle_post_message():
-    message = request.form.get('message')
-    image = request.files['image']
+def handle_post_message(data):
+    message = data['message']
+    image = data['image']
     cookie = request.cookies.get('auth_token', None)
+    
     if cookie:
         check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
         if check and message and image:
@@ -204,19 +207,18 @@ def handle_post_message():
     else:
         emit('message_error', {'error': 'User not authenticated.'})
 
-@socketio.on('post_reply')
-def handle_post_reply():
-    message = request.form.get('message')
-    id = request.form.get('msg_id')
+def handle_post_reply(data):
+    message = data['message']
+    msg_id = data['msg_id']
     cookie = request.cookies.get('auth_token', None)
     if cookie:
         check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
         if check and message:
-            chat = chat_collection.find_one({'_id': ObjectId(id)})
+            chat = chat_collection.find_one({'_id': ObjectId(msg_id)})
             if chat:
                 replies = chat.get('replys', [])
                 replies.append({'username': check['username'], 'message': message})
-                chat_collection.update_one({'_id': ObjectId(id)}, {"$set": {'replys': replies}})
+                chat_collection.update_one({'_id': ObjectId(msg_id)}, {"$set": {'replys': replies}})
                 emit('reply_success', {'message': 'Reply added successfully.'})
             else:
                 emit('reply_error', {'error': 'Chat not found.'})
@@ -224,6 +226,5 @@ def handle_post_reply():
             emit('reply_error', {'error': 'Authentication failed or message is empty.'})
     else:
         emit('reply_error', {'error': 'User not authenticated.'})
-
 
 socketio.run(app, host="0.0.0.0", port=8080, allow_unsafe_werkzeug=True)

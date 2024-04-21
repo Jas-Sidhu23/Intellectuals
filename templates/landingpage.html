@@ -27,13 +27,21 @@
         </div>
         <br>
         <div>
-            <form action="/message" method="POST" enctype="multipart/form-data">
+            <!-- <form action="/message" method="POST" enctype="multipart/form-data">
                 <label>Make a post here!</label>
                 <br>
                 <input type="text" placeholder="Type your message" name="message">
                 <input type="file" name="image" accept="image/jpeg, image/png, image/gif"> 
                 <input type="submit" value="Post Message">
+            </form> -->
+            <form id="message-form">
+                <label>Make a post here!</label>
+                <br>
+                <input type="text" placeholder="Type your message" name="message">
+                <input type="file" name="image" accept="image/jpeg, image/png, image/gif"> 
+                <button type="button" onclick="submitMessage()">Post Message</button>
             </form>
+            
         </div>
         <div>
             <h1>Messages:</h1>
@@ -46,12 +54,19 @@
                         <img src="{{ url_for('static', filename=message.image_path) }}" alt="Uploaded image">
                     {% endif %}
                     <br>
-                    <form action="/reply" method="POST">
+                    <!-- <form action="/reply" method="POST">
                         <label>Make a reply to this message:</label>
                         <br>
                         <input type="text" placeholder="Type your message" name="message">
                         <input type="text" placeholder="id" name="msg_id" value="{{message['_id']}}" hidden>
                         <input type="submit">
+                    </form> -->
+                    <form id="reply-form" method="POST">
+                        <label>Make a reply to this message:</label>
+                        <br>
+                        <input type="text" placeholder="Type your message" name="message">
+                        <input type="text" name="msg_id" value="{{message['_id']}}" hidden>
+                        <input type="submit" value="Reply">
                     </form>
                     <br>
                     <h1>Replies</h1>
@@ -74,6 +89,7 @@
         </div>
     </footer>
 
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script src="/functions.js"></script>
 </body>
 </html>
