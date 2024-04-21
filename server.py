@@ -139,15 +139,16 @@ def handle_post_message(data):
 
 @socketio.on('send_reply')
 def handle_send_reply(data):
-    chat_id = data['chat_id']
+    msg_id = data['msg_id']  # Change from 'chat_id' to 'msg_id'
     message = data['message']
     username = data['username']
-    chat = chat_collection.find_one({'_id': ObjectId(chat_id)})
+    chat = chat_collection.find_one({'_id': ObjectId(msg_id)})
     if chat:
         replies = chat.get('replies', [])
         replies.append({'username': username, 'message': message})
-        chat_collection.update_one({'_id': ObjectId(chat_id)}, {"$set": {'replies': replies}})
-        emit('reply_posted', {'chat_id': chat_id, 'replies': replies}, broadcast=True)
+        chat_collection.update_one({'_id': ObjectId(msg_id)}, {"$set": {'replies': replies}})
+        emit('reply_posted', {'msg_id': msg_id, 'replies': replies}, broadcast=True)
+
 
 if __name__ == '__main__':
     socketio.run(app, host="0.0.0.0", port=8080, allow_unsafe_werkzeug=True)
