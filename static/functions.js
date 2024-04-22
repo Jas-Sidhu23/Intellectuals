@@ -22,36 +22,36 @@ document.addEventListener("DOMContentLoaded", function() {
     socket.on('connection_response', function(data) {
         console.log(data.message);
         if (data.username) {
-            currentUser = data.username; // Save the username for later use
+            currentUser = data.username;
         }
     });
 
     document.getElementById('sendMessageButton').addEventListener('click', function() {
         var messageInput = document.querySelector('[name="message"]');
-        var imageInput = document.querySelector('[name="image"]'); // Assuming you have an input field for the image
-        var file = imageInput.files[0]; // Get the first file from the input
+        var imageInput = document.querySelector('[name="image"]');
+        var file = imageInput.files[0];
     
-        if (messageInput.value.trim() || file) { // Check if there's a message or an image
+        if (messageInput.value.trim() || file) {
             var reader = new FileReader();
             reader.onloadend = function() {
                 socket.emit('post_message', {
-                    username: currentUser, // This should be dynamically assigned
+                    username: 'username',
                     message: messageInput.value,
                     image: {
                         filename: file.name,
                         content: reader.result
                     }
                 });
-                messageInput.value = ''; // Clear the input after sending
+                messageInput.value = '';
             }
             if (file) {
-                reader.readAsArrayBuffer(file); // Read the file as an ArrayBuffer
+                reader.readAsArrayBuffer(file);
             } else {
                 socket.emit('post_message', {
-                    username: 'YourUsername', // This should be dynamically assigned
+                    username: 'YourUsername',
                     message: messageInput.value
                 });
-                messageInput.value = ''; // Clear the input after sending
+                messageInput.value = '';
             }
         }
     });
@@ -77,16 +77,13 @@ document.addEventListener("DOMContentLoaded", function() {
         `;
 
         if (data.image_path) {
-            // Construct the URL for the image
             var imageUrl = '/static/' + data.image_path;
-            // Add the image to the message HTML
             messageHtml += `<img src="${imageUrl}" alt="Uploaded image">`;
         }
 
         messagesContainer.appendChild(newMessageElement);
     });
 
-    // Event delegation for dynamically created reply buttons
     document.body.addEventListener('click', function(event) {
         if (event.target.classList.contains('sendReplyButton')) {
             var form = event.target.closest('form');
@@ -94,7 +91,7 @@ document.addEventListener("DOMContentLoaded", function() {
             var messageIdInput = form.querySelector('[name="msg_id"]');
             if (messageInput.value.trim()) {
                 socket.emit('send_reply', {
-                    username: currentUser,  // Ensure this variable is correctly maintained and available
+                    username: currentUser,
                     message: messageInput.value,
                     chat_id: messageIdInput.value
                 });
@@ -126,13 +123,12 @@ document.addEventListener("DOMContentLoaded", function() {
             var messageInput = form.querySelector('[name="message"]');
             var messageIdInput = form.querySelector('[name="msg_id"]');
             if (messageInput.value.trim() && messageIdInput.value) {
-                // You need to ensure that `username` is correctly defined and passed here
                 socket.emit('send_reply', {
-                    username: 'ActualUsername',  // Replace 'ActualUsername' with the actual username or retrieve it from an appropriate source
+                    username: 'ActualUsername',
                     message: messageInput.value,
                     chat_id: messageIdInput.value
                 });
-                messageInput.value = '';  // Clear the input after sending
+                messageInput.value = '';
             }
         });
     });
