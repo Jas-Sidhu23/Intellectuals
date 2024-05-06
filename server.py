@@ -36,11 +36,11 @@ request_counts = defaultdict(lambda: deque())
 blocked_ips = {}
 
 def get_client_ip():
-    if request.headers.getlist("X-Forwarded-For"):
-        # Extract the last forwarded IP, which should be the real client IP
-        return request.headers.getlist("X-Forwarded-For")[0].split(',')[-1].strip()
+    if 'CF-Connecting-IP' in request.headers:
+        return request.headers['CF-Connecting-IP']
+    if 'X-Forwarded-For' in request.headers:
+        return request.headers['X-Forwarded-For'].split(',')[-1].strip()
     return request.remote_addr
-
 
 def is_ip_blocked(ip):
     return ip in blocked_ips and datetime.now() < blocked_ips[ip]
