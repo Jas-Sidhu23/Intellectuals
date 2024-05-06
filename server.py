@@ -35,12 +35,18 @@ BLOCK_DURATION = timedelta(seconds=30)
 request_counts = defaultdict(lambda: deque())
 blocked_ips = {}
 
+def get_client_ip():
+    # Check for `X-Forwarded-For` in headers if behind a proxy
+    if 'X-Forwarded-For' in request.headers:
+        return request.headers['X-Forwarded-For'].split(',')[-1].strip()
+    return request.remote_addr
+
 def is_ip_blocked(ip):
     return ip in blocked_ips and datetime.now() < blocked_ips[ip]
 
 @app.before_request
 def rate_limit():
-    ip = request.remote_addr
+    ip = get_client_ip()
     now = datetime.now()
 
     if is_ip_blocked(ip):
@@ -77,7 +83,7 @@ def broadcast_active_times():
         socketio.sleep(1)
 
 @app.route('/logout')
-def logout():   
+def logout():
     cookie = request.cookies.get('auth_token')
     if cookie:
         user = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
