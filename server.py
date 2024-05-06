@@ -35,12 +35,13 @@ BLOCK_DURATION = timedelta(seconds=30)
 request_counts = defaultdict(lambda: deque())
 blocked_ips = {}
 
+
 def get_client_ip():
-    if 'CF-Connecting-IP' in request.headers:
-        return request.headers['CF-Connecting-IP']
-    if 'X-Forwarded-For' in request.headers:
-        return request.headers['X-Forwarded-For'].split(',')[-1].strip()
-    return request.remote_addr
+    ip = request.headers.get('CF-Connecting-IP')
+    if not ip:
+        ip = request.headers.get('X-Forwarded-For').split(',')[0] if 'X-Forwarded-For' in request.headers else request.remote_addr
+    return ip
+
 
 def is_ip_blocked(ip):
     return ip in blocked_ips and datetime.now() < blocked_ips[ip]
