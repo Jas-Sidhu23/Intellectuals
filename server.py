@@ -9,9 +9,11 @@ from hashlib import sha256
 from flask import jsonify
 from bson import ObjectId
 import logging
-import base64
+from datetime import datetime, timedelta
+import threading
+from html import escape as html_escape
+from collections import defaultdict, deque
 
-# Database configuration
 Database = MongoClient('mongo')
 Project = Database['Project']
 users_collection = Project['users']
@@ -23,16 +25,65 @@ app.config['UPLOAD_FOLDER'] = 'static/images'
 app.config['SECRET_KEY'] = 'your_secret_key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+active_users = {}
+
+REQUEST_LIMIT = 50
+TIME_WINDOW = timedelta(seconds=10)
+BLOCK_DURATION = timedelta(seconds=30)
+
+request_counts = defaultdict(lambda: deque())
+blocked_ips = {}
+
+def is_ip_blocked(ip):
+    return ip in blocked_ips and datetime.now() < blocked_ips[ip]
+
+@app.before_request
+def rate_limit():
+    ip = request.remote_addr
+    now = datetime.now()
+
+    if is_ip_blocked(ip):
+        return make_response("Too Many Requests", 429)
+
+    request_log = request_counts[ip]
+
+    while request_log and now - request_log[0] > TIME_WINDOW:
+        request_log.popleft()
+
+    request_log.append(now)
+
+    if len(request_log) > REQUEST_LIMIT:
+        blocked_ips[ip] = now + BLOCK_DURATION
+        request_counts.pop(ip, None)
+        return make_response("Too Many Requests", 429)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def calculate_active_time(user_id):
+    user = auth_token_collection.find_one({"_id": user_id})
+    if user and 'login_time' in user:
+        login_time = user['login_time']
+        if isinstance(login_time, str):
+            login_time = datetime.strptime(login_time, '%Y-%m-%dT%H:%M:%S.%f')
+        return (datetime.now() - login_time).total_seconds()
+    return 0
+
+def broadcast_active_times():
+    while True:
+        active_times = {username: calculate_active_time(user['_id']) for username, user in active_users.items()}
+        socketio.emit('active_times', active_times)
+        socketio.sleep(1)
 
 @app.route('/logout')
 def logout():   
     cookie = request.cookies.get('auth_token')
     if cookie:
-        auth_token_collection.find_one_and_delete({'token': sha256(cookie.encode()).hexdigest()})
+        user = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
+        if user:
+            auth_token_collection.find_one_and_delete({'_id': user['_id']})
+            active_users.pop(user['username'], None)
     response = make_response(redirect('/landingpage'))
     response.set_cookie('auth_token', "", max_age=0)
     return response
@@ -48,7 +99,8 @@ def landingpage():
     if cookie:
         check = auth_token_collection.find_one({'token': sha256(cookie.encode()).hexdigest()})
         if check:
-            return make_response(render_template('landingpage.html', prompt='You are signed in as: ' + check['username'], msgs=messages))
+            msgs = [{'username': html_escape(msg['username']), 'message': html_escape(msg['message'])} for msg in messages]
+            return make_response(render_template('landingpage.html', prompt='You are signed in as: ' + check['username'], msgs=msgs))
     return make_response(render_template('landingpage.html', prompt='You are not signed in! To make or interact with posts please sign in', msgs=messages))
 
 @app.route('/<path:filename>')
@@ -66,7 +118,13 @@ def signin():
         if user and hashpw(password.encode(), user['salt']) == user['password']:
             token = secrets.token_hex()
             auth_token_collection.delete_one({'username': username})
-            auth_token_collection.insert_one({'username': username, 'token': sha256(token.encode()).hexdigest()})
+            login_time = datetime.now()
+            auth_token_collection.insert_one({
+                'username': username,
+                'token': sha256(token.encode()).hexdigest(),
+                'login_time': login_time
+            })
+            active_users[username] = {'_id': user['_id'], 'login_time': login_time}
             response = make_response(redirect('/landingpage'))
             response.set_cookie('auth_token', token, max_age=3600, httponly=False)
             return response
@@ -99,21 +157,17 @@ def get_username():
 @socketio.on('connect')
 def handle_connect():
     token = request.args.get('token')
-    logging.info(f"Attempting to connect with token: {token}")
     if not token or token == "null":
-        logging.error("No valid token provided, disconnecting.")
         emit('error', {'error': 'Authentication failed'})
-        disconnect()
+        return
+    user = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
+    if user:
+        join_room(user['username'])
+        active_users[user['username']] = user
+        emit('connection_response', {'message': 'Connected as ' + user['username']})
     else:
-        user = auth_token_collection.find_one({'token': sha256(token.encode()).hexdigest()})
-        if user:
-            join_room(user['username'])
-            emit('connection_response', {'message': 'Connected as ' + user['username']})
-            logging.info("User connected successfully.")
-        else:
-            logging.error("Invalid token, disconnecting.")
-            emit('error', {'error': 'Authentication failed'})
-            disconnect()
+        emit('error', {'error': 'Authentication failed'})
+        return
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -121,7 +175,7 @@ def handle_disconnect():
 
 @socketio.on('post_message')
 def handle_post_message(data):
-    token = request.args.get('token')  # Ensure token is passed correctly; consider using session or a different method if not available
+    token = request.args.get('token')
     if not token:
         emit('error', {'error': 'No token provided'})
         return
@@ -132,7 +186,7 @@ def handle_post_message(data):
         return
 
     username = user_info['username']
-    message = data['message']
+    message = html_escape(data['message'])
     image_data = data.get('image')
     
     if image_data:
@@ -156,14 +210,12 @@ def handle_post_message(data):
         })
         emit('new_message', {'username': username, 'message': message, 'image_path': None}, broadcast=True)
 
-        
 @socketio.on('send_reply')
 def handle_send_reply(data):
     chat_id = data.get('chat_id')
     message = data.get('message')
-    token = request.args.get('token')  # This might not work as expected if token isn't in request.args
+    token = request.args.get('token') 
 
-    # It's better to handle token during the connection and store it in session or similar
     if not token:
         emit('error', {'error': 'No token provided'})
         return
@@ -191,4 +243,5 @@ def handle_send_reply(data):
     emit('reply_posted', {'chat_id': chat_id, 'username': username, 'message': message, 'replies': replies}, broadcast=True)
 
 if __name__ == '__main__':
+    threading.Thread(target=broadcast_active_times).start()
     socketio.run(app, host="0.0.0.0", port=8080, allow_unsafe_werkzeug=True)

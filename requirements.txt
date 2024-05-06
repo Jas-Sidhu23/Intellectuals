@@ -2,3 +2,4 @@ flask
 bcrypt
 pymongo
 flask-socketio
+markupsafe

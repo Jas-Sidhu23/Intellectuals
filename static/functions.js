@@ -1,19 +1,27 @@
 document.addEventListener("DOMContentLoaded", function() {
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth"
+        });
+    }
+    const scrollToBottomButton = document.getElementById('scrollToBottomButton');
+    if (scrollToBottomButton) {
+        scrollToBottomButton.addEventListener('click', scrollToBottom);
+    }
     function getCookie(name) {
         var value = `; ${document.cookie}`;
         var parts = value.split(`; ${name}=`);
         if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
         return null;
     }
-
     var authToken = getCookie('auth_token');
     if (!authToken) {
         console.error("Authentication token not found or not accessible.");
         return;
     }
-
     var socket = io({ query: { token: authToken } });
-    var currentUser;
+    var currentUser; 
 
     socket.on('connect', function() {
         console.log('Connected to the WebSocket server.');
@@ -26,29 +34,38 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
+    socket.on('active_times', function(activeTimes) {
+        const userList = document.getElementById('user-list');
+        userList.innerHTML = ''; 
+
+        for (const [username, activeTime] of Object.entries(activeTimes)) {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `<span class="username">${username}</span>: <span class="active-time">${activeTime.toFixed(2)} seconds</span>`;
+            userList.appendChild(listItem);
+        }
+    });
+
     document.getElementById('sendMessageButton').addEventListener('click', function() {
         var messageInput = document.querySelector('[name="message"]');
         var imageInput = document.querySelector('[name="image"]');
         var file = imageInput.files[0];
-    
+
         if (messageInput.value.trim() || file) {
-            var reader = new FileReader();
-            reader.onloadend = function() {
-                socket.emit('post_message', {
-                    username: 'username',
-                    message: messageInput.value,
-                    image: {
-                        filename: file.name,
-                        content: reader.result
-                    }
-                });
-                messageInput.value = '';
-            }
             if (file) {
+                var reader = new FileReader();
+                reader.onloadend = function() {
+                    socket.emit('post_message', {
+                        message: messageInput.value,
+                        image: {
+                            filename: file.name,
+                            content: reader.result
+                        }
+                    });
+                    messageInput.value = '';
+                }
                 reader.readAsArrayBuffer(file);
             } else {
                 socket.emit('post_message', {
-                    username: 'YourUsername',
                     message: messageInput.value
                 });
                 messageInput.value = '';
@@ -61,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var messagesContainer = document.getElementById('messagesContainer');
         var newMessageElement = document.createElement('div');
         newMessageElement.classList.add('message');
-        
+
         newMessageElement.innerHTML = `
             <p>-----------------------------------</p>
             <p>Post User: ${data.username}</p>
@@ -78,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (data.image_path) {
             var imageUrl = '/static/' + data.image_path;
-            messageHtml += `<img src="${imageUrl}" alt="Uploaded image">`;
+            newMessageElement.innerHTML += `<img src="${imageUrl}" alt="Uploaded image">`;
         }
 
         messagesContainer.appendChild(newMessageElement);
@@ -99,7 +116,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     });
-    
 
     socket.on('reply_posted', function(data) {
         console.log('Reply posted:', data);
@@ -124,7 +140,6 @@ document.addEventListener("DOMContentLoaded", function() {
             var messageIdInput = form.querySelector('[name="msg_id"]');
             if (messageInput.value.trim() && messageIdInput.value) {
                 socket.emit('send_reply', {
-                    username: 'ActualUsername',
                     message: messageInput.value,
                     chat_id: messageIdInput.value
                 });

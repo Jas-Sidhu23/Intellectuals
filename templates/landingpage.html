@@ -28,6 +28,10 @@
             <p>{{ prompt }}</p>
         </div>
         <br>
+        <section id="user-list-container">
+            <h2>Active Users</h2>
+            <ul id="user-list"></ul>
+        </section>
         <div>
             <form enctype="multipart/form-data" id="postMessageForm">
                 <label>Make a post here!</label>
@@ -37,6 +41,7 @@
                 <input type="button" value="Post Message" id="sendMessageButton">
             </form>
         </div>
+        <button id="scrollToBottomButton">Scroll to Bottom</button>
         <div id="messagesContainer">
             <h1>Messages:</h1>
             {% for message in msgs %}
@@ -52,7 +57,7 @@
                     <label>Make a reply to message:</label>
                     <br>
                     <input type="text" placeholder="Type your message" name="message">
-                    <input type="text" name="msg_id" value="{{ message['_id'] }}" hidden>
+                    <input type="hidden" name="msg_id" value="{{ message['_id'] }}">
                     <button type="button" class="sendReplyButton">Reply</button>
                 </form>
                 
