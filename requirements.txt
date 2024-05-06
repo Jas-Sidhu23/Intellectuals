@@ -2,4 +2,4 @@ flask
 bcrypt
 pymongo
 flask-socketio
-markupsafe
+Flask-Limiter

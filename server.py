@@ -35,13 +35,11 @@ BLOCK_DURATION = timedelta(seconds=30)
 request_counts = defaultdict(lambda: deque())
 blocked_ips = {}
 
-
 def get_client_ip():
-    ip = request.headers.get('CF-Connecting-IP')
-    if not ip:
-        ip = request.headers.get('X-Forwarded-For').split(',')[0] if 'X-Forwarded-For' in request.headers else request.remote_addr
-    return ip
-
+    # Check for `X-Forwarded-For` in headers if behind a proxy
+    if 'X-Forwarded-For' in request.headers:
+        return request.headers['X-Forwarded-For'].split(',')[-1].strip()
+    return request.remote_addr
 
 def is_ip_blocked(ip):
     return ip in blocked_ips and datetime.now() < blocked_ips[ip]
@@ -52,9 +50,7 @@ def rate_limit():
     now = datetime.now()
 
     if is_ip_blocked(ip):
-        response = make_response("Too Many Requests", 429)
-        response.headers["Retry-After"] = int(BLOCK_DURATION.total_seconds())
-        return response
+        return make_response("Too Many Requests", 429)
 
     request_log = request_counts[ip]
 
@@ -66,9 +62,7 @@ def rate_limit():
     if len(request_log) > REQUEST_LIMIT:
         blocked_ips[ip] = now + BLOCK_DURATION
         request_counts.pop(ip, None)
-        response = make_response("Too Many Requests", 429)
-        response.headers["Retry-After"] = int(BLOCK_DURATION.total_seconds())
-        return response
+        return make_response("Too Many Requests", 429)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -226,7 +220,7 @@ def handle_post_message(data):
 def handle_send_reply(data):
     chat_id = data.get('chat_id')
     message = data.get('message')
-    token = request.args.get('token')
+    token = request.args.get('token') 
 
     if not token:
         emit('error', {'error': 'No token provided'})
